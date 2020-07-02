@@ -21,7 +21,7 @@ cd ..
 ```
 python demo.py --data data/Human06
 ```
-- It also **supports video file**.
+- It also **supports a video file**.
 ```
 python demo.py --data data/bag.avi
 ```
