@@ -6,5 +6,5 @@
 # @project https://github.com/StrangerZhang/pysot-toolkit.git
 # Revised for SiamMask by foolwood
 # --------------------------------------------------------
-from .ar_benchmark import AccuracyRobustnessBenchmark
-from .eao_benchmark import EAOBenchmark
+from . import region
+from .statistics import *

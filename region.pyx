@@ -1,3 +1,12 @@
+# --------------------------------------------------------
+# Python Single Object Tracking Evaluation
+# Licensed under The MIT License [see LICENSE for details]
+# Written by Fangyi Zhang
+# @author fangyi.zhang@vipl.ict.ac.cn
+# @project https://github.com/StrangerZhang/pysot-toolkit.git
+# Revised for SiamMask by foolwood
+# --------------------------------------------------------
+
 # distutils: sources = src/region.c
 # distutils: include_dirs = src/
 
@@ -8,7 +17,7 @@ from libc.string cimport strlen
 cimport c_region
 
 cpdef enum RegionType:
-    EMTPY 
+    EMTPY
     SPECIAL
     RECTANGEL
     POLYGON
@@ -50,8 +59,6 @@ cdef class RegionBounds:
         self._c_region_bounds.bottom = bottom
         self._c_region_bounds.left = left
         self._c_region_bounds.right = right
-
-
 
 cdef class Rectangle:
     cdef c_region.region_rectangle* _c_region_rectangle
@@ -101,10 +108,9 @@ cdef class Polygon:
         """
         args:
             points: tuple of point
-            
             points = ((1, 1), (10, 10))
         """
-        num = len(points)
+        num = len(points) // 2
         self._c_region_polygon = <c_region.region_polygon*>malloc(
                 sizeof(c_region.region_polygon))
         if not self._c_region_polygon:
@@ -119,8 +125,8 @@ cdef class Polygon:
             raise MemoryError()
 
         for i in range(num):
-            self._c_region_polygon.x[i] = points[i][0]
-            self._c_region_polygon.y[i] = points[i][1]
+            self._c_region_polygon.x[i] = points[i*2]
+            self._c_region_polygon.y[i] = points[i*2+1]
 
     def __dealloc__(self):
         if self._c_region_polygon is not NULL:
@@ -142,94 +148,76 @@ cdef class Polygon:
                 self._c_region_polygon.y[i])
         return ret
 
-
-
-# cdef float c_vot_overlap(c_region.region_polygon* p1, c_region.region_polygon* p2,
-#         bounds=RegionBounds(-float("inf"), float("inf"),
-#                             float("inf"), float("inf"))):
-#     cdef float only1 = 0
-#     cdef float only2 = 0
-#     return c_region.compute_polygon_overlap(p1,
-#                                             p2, 
-#                                             &only1, 
-#                                             &only2, 
-#                                             bounds._c_region_bounds)
-
-# def vot_overlap(p1, p2):
-#     return c_vot_overlap(p1, p2)
-
 def vot_overlap(polygon1, polygon2, bounds=None):
     """ computing overlap between two polygon
     Args:
         polygon1: polygon tuple of points
         polygon2: polygon tuple of points
-        bounds: tuple of (left, top, right, bottom)
+        bounds: tuple of (left, top, right, bottom) or tuple of (width height)
     Return:
         overlap: overlap between two polygons
     """
-    polygon1_ = Polygon(polygon1)
-    polygon2_ = Polygon(polygon2)
+    if len(polygon1) == 1 or len(polygon2) == 1:
+        return float("nan")
+
+    if len(polygon1) == 4:
+        polygon1_ = Polygon([polygon1[0], polygon1[1],
+                             polygon1[0]+polygon1[2], polygon1[1],
+                             polygon1[0]+polygon1[2], polygon1[1]+polygon1[3],
+                             polygon1[0], polygon1[1]+polygon1[3]])
+    else:
+        polygon1_ = Polygon(polygon1)
+
+    if len(polygon2) == 4:
+        polygon2_ = Polygon([polygon2[0], polygon2[1],
+                             polygon2[0]+polygon2[2], polygon2[1],
+                             polygon2[0]+polygon2[2], polygon2[1]+polygon2[3],
+                             polygon2[0], polygon2[1]+polygon2[3]])
+    else:
+        polygon2_ = Polygon(polygon2)
+
+    if bounds is not None and len(bounds) == 4:
+        pno_bounds = RegionBounds(bounds[0], bounds[1], bounds[2], bounds[3])
+    elif bounds is not None and len(bounds) == 2:
+        pno_bounds = RegionBounds(0, bounds[1], 0, bounds[0])
+    else:
+        pno_bounds = RegionBounds(-float("inf"), float("inf"),
+                                  -float("inf"), float("inf"))
     cdef float only1 = 0
     cdef float only2 = 0
-    # cdef c_region.region_polygon* c_polygon1 = polygon1._c_region_polygon
-    # cdef c_region.region_polygon* c_polygon2 = polygon2._c_region_polygon
     cdef c_region.region_polygon* c_polygon1 = polygon1_._c_region_polygon
     cdef c_region.region_polygon* c_polygon2 = polygon2_._c_region_polygon
-    cdef c_region.region_bounds no_bounds
-    if bounds is not None and len(bounds) == 2:
-        no_bounds.top = 0
-        no_bounds.bottom = bounds[1]
-        no_bounds.left = 0
-        no_bounds.right = bounds[0]
-    elif bounds is not None and len(bounds) == 4:
-        bounds.left = bounds[0]
-        bounds.top = bounds[1]
-        bounds.right = bounds[2]
-        bounds.bottom = bounds[3]
-    else:
-        no_bounds.top = -float("inf")
-        no_bounds.bottom = float("inf")
-        no_bounds.left = -float("inf")
-        no_bounds.right = float("inf")
+    cdef c_region.region_bounds no_bounds = pno_bounds._c_region_bounds[0] # deference
     return c_region.compute_polygon_overlap(c_polygon1,
                                             c_polygon2,
                                             &only1,
                                             &only2,
                                             no_bounds)
 
-def vot_overlap_traj(polygons1, polygons2, bounds):
+def vot_overlap_traj(polygons1, polygons2, bounds=None):
     """ computing overlap between two trajectory
     Args:
         polygons1: list of polygon
         polygons2: list of polygon
+        bounds: tuple of (left, top, right, bottom) or tuple of (width height)
+    Return:
+        overlaps: overlaps between all pair of polygons
     """
+    assert len(polygons1) == len(polygons2)
     overlaps = []
-    num = len(polygons1)
-    cdef float only1 = 0
-    cdef float only2 = 0
-    cdef c_region.region_bounds no_bounds
-    no_bounds.top = -float("inf")
-    no_bounds.bottom = float("inf")
-    no_bounds.left = -float("inf")
-    no_bounds.right = float("inf")
-    cdef c_region.region_polygon* c_polygon1
-    cdef c_region.region_polygon* c_polygon2
-    for i in range(num):
-        polygon1_ = Polygon(polygons1[i])
-        polygon2_ = Polygon(polygons2[i])
-        c_polygon1 = polygon1_._c_region_polygon
-        c_polygon2 = polygon2_._c_region_polygon
-        overlap = c_region.compute_polygon_overlap(c_polygon1,
-                                                   c_polygon2,
-                                                   &only1,
-                                                   &only2,
-                                                   no_bounds)
+    for i in range(len(polygons1)):
+        overlap = vot_overlap(polygons1[i], polygons2[i], bounds=bounds)
         overlaps.append(overlap)
     return overlaps
 
 
 def vot_float2str(template, float value):
-    cdef bytes ptemplate = template.encode()   
+    """
+    Args:
+        tempate: like "%.3f" in C syntax
+        value: float value
+    """
+    cdef bytes ptemplate = template.encode()
     cdef const char* ctemplate = ptemplate
     cdef char* output = <char*>malloc(sizeof(char) * 100)
     if not output:
