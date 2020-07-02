@@ -1,6 +1,6 @@
-cdef extern from "src/region.h":
+cdef extern from "region.h":
     ctypedef enum region_type "RegionType":
-        EMTPY
+        EMTPY 
         SPECIAL
         RECTANGEL
         POLYGON
@@ -24,7 +24,7 @@ cdef extern from "src/region.h":
     #     int width
     #     int height
     #     char *data
-
+    
     ctypedef struct region_polygon:
         int count
         float *x
