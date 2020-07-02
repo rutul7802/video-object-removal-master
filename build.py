@@ -10,13 +10,13 @@ Defines = []
 Objects = []
 
 if torch.cuda.is_available() == True:
-    Headers += ['src/correlation_cuda.h']
-    Sources += ['src/correlation_cuda.c']
+    Headers += ['src/Resample2d_cuda.h']
+    Sources += ['src/Resample2d_cuda.c']
     Defines += [('WITH_CUDA', None)]
-    Objects += ['src/correlation_cuda_kernel.o']
+    Objects += ['src/Resample2d_kernel.o']
 
 ffi = torch.utils.ffi.create_extension(
-    name='_ext.correlation',
+    name='_ext.resample2d',
     headers=Headers,
     sources=Sources,
     verbose=False,
