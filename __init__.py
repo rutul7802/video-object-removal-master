@@ -7,4 +7,3 @@
 # Revised for SiamMask by foolwood
 # --------------------------------------------------------
 from . import region
-from .statistics import *
