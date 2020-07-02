@@ -19,7 +19,7 @@ cd ..
 - Put them in `cp/` folder
 - Then just run:
 ```
-python demo.py --data data/Human6
+python demo.py --data data/Human06
 ```
 - It also **supports video file**.
 ```
