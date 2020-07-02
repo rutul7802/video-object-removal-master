@@ -10,13 +10,13 @@ Defines = []
 Objects = []
 
 if torch.cuda.is_available() == True:
-    Headers += ['src/ChannelNorm_cuda.h']
-    Sources += ['src/ChannelNorm_cuda.c']
+    Headers += ['src/correlation_cuda.h']
+    Sources += ['src/correlation_cuda.c']
     Defines += [('WITH_CUDA', None)]
-    Objects += ['src/ChannelNorm_kernel.o']
+    Objects += ['src/correlation_cuda_kernel.o']
 
 ffi = torch.utils.ffi.create_extension(
-    name='_ext.channelnorm',
+    name='_ext.correlation',
     headers=Headers,
     sources=Sources,
     verbose=False,
